@@ -9,7 +9,7 @@
 
 import unittest
 from qiskit.transpiler import PropertySet
-from ..common import QiskitTestCase
+from qiskit.test import QiskitTestCase
 
 
 class TestPropertySet(QiskitTestCase):
@@ -26,6 +26,16 @@ class TestPropertySet(QiskitTestCase):
         """ Setting and retrieving."""
         self.pset['property'] = 'value'
         self.assertEqual(self.pset['property'], 'value')
+
+    def test_str(self):
+        """ Test __str__ method. """
+        self.pset['property'] = 'value'
+        self.assertEqual(str(self.pset), "{'property': 'value'}")
+
+    def test_repr(self):
+        """ Test __repr__ method. """
+        self.pset['property'] = 'value'
+        self.assertEqual(str(repr(self.pset)), "{'property': 'value'}")
 
 
 if __name__ == '__main__':

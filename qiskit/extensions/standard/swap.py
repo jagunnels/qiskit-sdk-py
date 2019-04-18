@@ -10,50 +10,45 @@
 """
 SWAP gate.
 """
-from qiskit import CompositeGate
-from qiskit import Gate
-from qiskit import QuantumCircuit
-from qiskit._instructionset import InstructionSet
-from qiskit._quantumregister import QuantumRegister
-from qiskit.extensions.standard import header  # pylint: disable=unused-import
+from qiskit.circuit import CompositeGate
+from qiskit.circuit import Gate
+from qiskit.circuit import QuantumCircuit
+from qiskit.circuit import QuantumRegister
+from qiskit.circuit.decorators import _op_expand
+from qiskit.extensions.standard.cx import CnotGate
 
 
 class SwapGate(Gate):
     """SWAP gate."""
 
-    def __init__(self, ctl, tgt, circ=None):
+    def __init__(self):
         """Create new SWAP gate."""
-        super().__init__("swap", [], [ctl, tgt], circ)
+        super().__init__("swap", 2, [])
 
-    def qasm(self):
-        """Return OPENQASM string."""
-        ctl = self.arg[0]
-        tgt = self.arg[1]
-        return self._qasmif("swap %s[%d],%s[%d];" % (ctl[0].name, ctl[1],
-                                                     tgt[0].name, tgt[1]))
+    def _define(self):
+        """
+        gate swap a,b { cx a,b; cx b,a; cx a,b; }
+        """
+        definition = []
+        q = QuantumRegister(2, "q")
+        rule = [
+            (CnotGate(), [q[0], q[1]], []),
+            (CnotGate(), [q[1], q[0]], []),
+            (CnotGate(), [q[0], q[1]], [])
+        ]
+        for inst in rule:
+            definition.append(inst)
+        self.definition = definition
 
     def inverse(self):
         """Invert this gate."""
-        return self  # self-inverse
-
-    def reapply(self, circ):
-        """Reapply this gate to corresponding qubits in circ."""
-        self._modifiers(circ.swap(self.arg[0], self.arg[1]))
+        return SwapGate()  # self-inverse
 
 
-def swap(self, ctl, tgt):
-    """Apply SWAP from ctl to tgt."""
-    if isinstance(ctl, QuantumRegister) and \
-            isinstance(tgt, QuantumRegister) and len(ctl) == len(tgt):
-        instructions = InstructionSet()
-        for j in range(ctl.size):
-            instructions.add(self.swap((ctl, j), (tgt, j)))
-        return instructions
-
-    self._check_qubit(ctl)
-    self._check_qubit(tgt)
-    self._check_dups([ctl, tgt])
-    return self._attach(SwapGate(ctl, tgt, self))
+@_op_expand(2, broadcastable=[False, False])
+def swap(self, qubit1, qubit2):
+    """Apply SWAP from qubit1 to qubit2."""
+    return self.append(SwapGate(), [qubit1, qubit2], [])
 
 
 QuantumCircuit.swap = swap

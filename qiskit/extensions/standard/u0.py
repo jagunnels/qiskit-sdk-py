@@ -10,47 +10,40 @@
 """
 Single qubit gate cycle idle.
 """
-from qiskit import CompositeGate
-from qiskit import Gate
-from qiskit import QuantumCircuit
-from qiskit._instructionset import InstructionSet
-from qiskit._quantumregister import QuantumRegister
+from qiskit.circuit import CompositeGate
+from qiskit.circuit import Gate
+from qiskit.circuit import QuantumCircuit
+from qiskit.circuit import QuantumRegister
+from qiskit.circuit.decorators import _op_expand
+from qiskit.extensions.standard.u3 import U3Gate
 
 
 class U0Gate(Gate):
     """Wait gate."""
 
-    def __init__(self, m, qubit, circ=None):
+    def __init__(self, m):
         """Create new u0 gate."""
-        super().__init__("u0", [m], [qubit], circ)
+        super().__init__("u0", 1, [m])
 
-    def qasm(self):
-        """Return OPENQASM string."""
-        qubit = self.arg[0]
-        m = self.param[0]
-        return self._qasmif("u0(%f) %s[%d];" % (m,
-                                                qubit[0].name,
-                                                qubit[1]))
+    def _define(self):
+        definition = []
+        q = QuantumRegister(1, "q")
+        rule = [
+            (U3Gate(0, 0, 0), [q[0]], [])
+        ]
+        for inst in rule:
+            definition.append(inst)
+        self.definition = definition
 
     def inverse(self):
         """Invert this gate."""
-        return self  # self-inverse
-
-    def reapply(self, circ):
-        """Reapply this gate to corresponding qubits in circ."""
-        self._modifiers(circ.u0(self.param[0], self.arg[0]))
+        return U0Gate(self.params[0])  # self-inverse
 
 
+@_op_expand(1)
 def u0(self, m, q):
     """Apply u0 with length m to q."""
-    if isinstance(q, QuantumRegister):
-        instructions = InstructionSet()
-        for j in range(q.size):
-            instructions.add(self.u0(m, (q, j)))
-        return instructions
-
-    self._check_qubit(q)
-    return self._attach(U0Gate(m, q, self))
+    return self.append(U0Gate(m), [q], [])
 
 
 QuantumCircuit.u0 = u0

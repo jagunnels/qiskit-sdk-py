@@ -10,8 +10,8 @@
 """BasePass and generic pass testing"""
 
 import unittest.mock
+from qiskit.test import QiskitTestCase
 from ._dummy_passes import DummyAP, DummyTP, PassA_TP_NR_NP, PassD_TP_NR_NP, PassE_AP_NR_NP
-from ..common import QiskitTestCase
 
 
 class TestGenericPass(QiskitTestCase):
@@ -43,6 +43,12 @@ class TestGenericPass(QiskitTestCase):
         pass1 = PassD_TP_NR_NP(argument1=[1, 2])
         pass2 = PassD_TP_NR_NP(argument1=[2, 1])
         self.assertNotEqual(pass1, pass2)
+
+    def test_pass_args_kwargs(self):
+        """ Same pass if same args and kwargs"""
+        pass1 = PassD_TP_NR_NP(argument1=[1, 2])
+        pass2 = PassD_TP_NR_NP([1, 2])
+        self.assertEqual(pass1, pass2)
 
     def test_pass_kwargs_out_of_order(self):
         """ Passes instances with same arguments (independently of the order) are the same"""

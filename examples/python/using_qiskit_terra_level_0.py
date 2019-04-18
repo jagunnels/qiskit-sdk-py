@@ -19,9 +19,10 @@ as a level 1 user.
 import time
 
 # Import the Qiskit modules
-from qiskit import QuantumCircuit, ClassicalRegister, QuantumRegister, QISKitError
-from qiskit import execute, IBMQ, Aer
-from qiskit.backends.ibmq import least_busy
+from qiskit import QuantumCircuit, ClassicalRegister, QuantumRegister, QiskitError
+from qiskit import execute, IBMQ, BasicAer
+from qiskit.providers.ibmq import least_busy
+from qiskit.tools.monitor import job_monitor
 
 
 try:
@@ -49,14 +50,13 @@ try:
 
     # setting up the backend
     print("(AER Backends)")
-    print(Aer.backends())
+    print(BasicAer.backends())
 
     # running the job
-    job_sim = execute([qc1, qc2], Aer.get_backend('qasm_simulator'))
+    job_sim = execute([qc1, qc2], BasicAer.get_backend('qasm_simulator'))
     sim_result = job_sim.result()
 
     # Show the results
-    print("simulation: ", sim_result)
     print(sim_result.get_counts(qc1))
     print(sim_result.get_counts(qc2))
 
@@ -68,26 +68,20 @@ try:
     try:
         # select least busy available device and execute.
         least_busy_device = least_busy(IBMQ.backends(simulator=False))
-        print("Running on current least busy device: ", least_busy_device)
-
-        # running the job
-        job_exp = execute([qc1, qc2], backend=least_busy_device, shots=1024, max_credits=10)
-
-        lapse = 0
-        interval = 10
-        while job_exp.status().name != 'DONE':
-            print('Status @ {} seconds'.format(interval * lapse))
-            print(job_exp.status())
-            time.sleep(interval)
-            lapse += 1
-        print(job_exp.status())
-        exp_result = job_exp.result()
-
-        # Show the results
-        print("experiment: ", exp_result)
-        print(exp_result.get_counts(qc1))
-        print(exp_result.get_counts(qc2))
     except:
         print("All devices are currently unavailable.")
-except QISKitError as ex:
+
+    print("Running on current least busy device: ", least_busy_device)
+
+    # running the job
+    job_exp = execute([qc1, qc2], backend=least_busy_device, shots=1024, max_credits=10)
+
+    job_monitor(job_exp)
+    exp_result = job_exp.result()
+
+    # Show the results
+    print(exp_result.get_counts(qc1))
+    print(exp_result.get_counts(qc2))
+
+except QiskitError as ex:
     print('There was an error in the circuit!. Error = {}'.format(ex))

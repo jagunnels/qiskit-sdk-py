@@ -13,12 +13,13 @@ used `pip install`, the examples only work from the root directory.
 """
 
 from qiskit import QuantumRegister, ClassicalRegister, QuantumCircuit
-from qiskit import  compile, Aer
+from qiskit import BasicAer
+from qiskit import execute
 
 ###############################################################
 # Set the backend name and coupling map.
 ###############################################################
-backend = Aer.get_backend("qasm_simulator")
+backend = BasicAer.get_backend("qasm_simulator")
 coupling_map = [[0,1], [0, 8], [1, 2], [1, 9], [2, 3], [2, 10], [3, 4], [3, 11],
                 [4, 5], [4, 12], [5, 6], [5, 13], [6, 7], [6, 14], [7, 15], [8, 9],
                 [9, 10], [10, 11], [11, 12], [12, 13], [13, 14], [14, 15]]
@@ -76,18 +77,13 @@ qc.measure(cout[0], ans[n])
 ###############################################################
 
 # First version: not mapped
-qobj = compile(qc, backend=backend, coupling_map=None, shots=1024)
-job = backend.run(qobj)
+job = execute(qc, backend=backend, coupling_map=None, shots=1024)
 result = job.result()
-print(result)
 print(result.get_counts(qc))
 
 # Second version: mapped to 2x8 array coupling graph
-qobj = compile(qc, backend=backend, coupling_map=coupling_map, shots=1024)
-job = backend.run(qobj)
+job = execute(qc, backend=backend, coupling_map=coupling_map, shots=1024)
 result = job.result()
-
-print(result)
 print(result.get_counts(qc))
 
 # Both versions should give the same distribution

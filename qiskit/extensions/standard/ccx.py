@@ -8,58 +8,65 @@
 """
 Toffoli gate. Controlled-Controlled-X.
 """
-from qiskit import CompositeGate
-from qiskit import Gate
-from qiskit import QuantumCircuit
-from qiskit._instructionset import InstructionSet
-from qiskit._quantumregister import QuantumRegister
-from qiskit.extensions.standard import header  # pylint: disable=unused-import
+from qiskit.circuit import CompositeGate
+from qiskit.circuit import Gate
+from qiskit.circuit import QuantumCircuit
+from qiskit.circuit import QuantumRegister
+from qiskit.circuit.decorators import _op_expand
+from qiskit.extensions.standard.h import HGate
+from qiskit.extensions.standard.cx import CnotGate
+from qiskit.extensions.standard.t import TGate
+from qiskit.extensions.standard.t import TdgGate
 
 
 class ToffoliGate(Gate):
     """Toffoli gate."""
 
-    def __init__(self, ctl1, ctl2, tgt, circ=None):
+    def __init__(self):
         """Create new Toffoli gate."""
-        super().__init__("ccx", [], [ctl1, ctl2, tgt], circ)
+        super().__init__("ccx", 3, [])
 
-    def qasm(self):
-        """Return OPENQASM string."""
-        ctl1 = self.arg[0]
-        ctl2 = self.arg[1]
-        tgt = self.arg[2]
-        return self._qasmif("ccx %s[%d],%s[%d],%s[%d];" % (ctl1[0].name,
-                                                           ctl1[1],
-                                                           ctl2[0].name,
-                                                           ctl2[1],
-                                                           tgt[0].name,
-                                                           tgt[1]))
+    def _define(self):
+        """
+        gate ccx a,b,c
+        {
+        h c; cx b,c; tdg c; cx a,c;
+        t c; cx b,c; tdg c; cx a,c;
+        t b; t c; h c; cx a,b;
+        t a; tdg b; cx a,b;}
+        """
+        definition = []
+        q = QuantumRegister(3, "q")
+        rule = [
+            (HGate(), [q[2]], []),
+            (CnotGate(), [q[1], q[2]], []),
+            (TdgGate(), [q[2]], []),
+            (CnotGate(), [q[0], q[2]], []),
+            (TGate(), [q[2]], []),
+            (CnotGate(), [q[1], q[2]], []),
+            (TdgGate(), [q[2]], []),
+            (CnotGate(), [q[0], q[2]], []),
+            (TGate(), [q[1]], []),
+            (TGate(), [q[2]], []),
+            (HGate(), [q[2]], []),
+            (CnotGate(), [q[0], q[1]], []),
+            (TGate(), [q[0]], []),
+            (TdgGate(), [q[1]], []),
+            (CnotGate(), [q[0], q[1]], [])
+        ]
+        for inst in rule:
+            definition.append(inst)
+        self.definition = definition
 
     def inverse(self):
         """Invert this gate."""
-        return self  # self-inverse
-
-    def reapply(self, circ):
-        """Reapply this gate to corresponding qubits in circ."""
-        self._modifiers(circ.ccx(self.arg[0], self.arg[1], self.arg[2]))
+        return ToffoliGate()  # self-inverse
 
 
+@_op_expand(3, broadcastable=[True, True, False])
 def ccx(self, ctl1, ctl2, tgt):
     """Apply Toffoli to from ctl1 and ctl2 to tgt."""
-    if isinstance(ctl1, QuantumRegister) and \
-       isinstance(ctl2, QuantumRegister) and \
-       isinstance(tgt, QuantumRegister) and \
-       len(ctl1) == len(tgt) and len(ctl2) == len(tgt):
-        instructions = InstructionSet()
-        for i in range(ctl1.size):
-            instructions.add(self.ccx((ctl1, i), (ctl2, i), (tgt, i)))
-        return instructions
-
-    self._check_qubit(ctl1)
-    self._check_qubit(ctl2)
-    self._check_qubit(tgt)
-    self._check_dups([ctl1, ctl2, tgt])
-    return self._attach(ToffoliGate(ctl1, ctl2, tgt, self))
+    return self.append(ToffoliGate(), [ctl1, ctl2, tgt], [])
 
 
 QuantumCircuit.ccx = ccx

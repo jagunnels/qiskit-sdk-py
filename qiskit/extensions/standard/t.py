@@ -5,56 +5,80 @@
 # This source code is licensed under the Apache License, Version 2.0 found in
 # the LICENSE.txt file in the root directory of this source tree.
 
-# pylint: disable=invalid-name
+# pylint: disable=invalid-name,arguments-differ
 
 """
 T=sqrt(S) phase gate or its inverse.
 """
-from qiskit import CompositeGate
-from qiskit import InstructionSet
-from qiskit import QuantumCircuit
-from qiskit import QuantumRegister
+from qiskit.circuit import CompositeGate
+from qiskit.circuit import Gate
+from qiskit.circuit import QuantumCircuit
+from qiskit.circuit import QuantumRegister
+from qiskit.circuit.decorators import _op_expand
 from qiskit.qasm import pi
-from qiskit.extensions.standard import header  # pylint: disable=unused-import
+from qiskit.extensions.standard.u1 import U1Gate
 
 
-class TGate(CompositeGate):
-    """T=sqrt(S) Clifford phase gate or its inverse."""
+class TGate(Gate):
+    """T Gate: pi/4 rotation around Z axis."""
 
-    def __init__(self, qubit, circ=None):
+    def __init__(self):
         """Create new T gate."""
-        super().__init__("t", [], [qubit], circ)
-        self.u1(pi / 4, qubit)
+        super().__init__("t", 1, [])
 
-    def reapply(self, circ):
-        """Reapply this gate to corresponding qubits in circ."""
-        self._modifiers(circ.t(self.arg[0]))
+    def _define(self):
+        """
+        gate t a { u1(pi/4) a; }
+        """
+        definition = []
+        q = QuantumRegister(1, "q")
+        rule = [
+            (U1Gate(pi/4), [q[0]], [])
+        ]
+        for inst in rule:
+            definition.append(inst)
+        self.definition = definition
 
-    def qasm(self):
-        """Return OPENQASM string."""
-        qubit = self.data[0].arg[0]
-        phi = self.data[0].param[0]
-        if phi > 0:
-            return self.data[0]._qasmif("t %s[%d];" % (qubit[0].name, qubit[1]))
-
-        return self.data[0]._qasmif("tdg %s[%d];" % (qubit[0].name, qubit[1]))
+    def inverse(self):
+        """Invert this gate."""
+        return TdgGate()
 
 
+class TdgGate(Gate):
+    """T Gate: -pi/4 rotation around Z axis."""
+
+    def __init__(self):
+        """Create new Tdg gate."""
+        super().__init__("tdg", 1, [])
+
+    def _define(self):
+        """
+        gate t a { u1(pi/4) a; }
+        """
+        definition = []
+        q = QuantumRegister(1, "q")
+        rule = [
+            (U1Gate(-pi/4), [q[0]], [])
+        ]
+        for inst in rule:
+            definition.append(inst)
+        self.definition = definition
+
+    def inverse(self):
+        """Invert this gate."""
+        return TGate()
+
+
+@_op_expand(1)
 def t(self, q):
     """Apply T to q."""
-    if isinstance(q, QuantumRegister):
-        instructions = InstructionSet()
-        for j in range(q.size):
-            instructions.add(self.t((q, j)))
-        return instructions
-
-    self._check_qubit(q)
-    return self._attach(TGate(q, self))
+    return self.append(TGate(), [q], [])
 
 
+@_op_expand(1)
 def tdg(self, q):
     """Apply Tdg to q."""
-    return self.t(q).inverse()
+    return self.append(TdgGate(), [q], [])
 
 
 QuantumCircuit.t = t

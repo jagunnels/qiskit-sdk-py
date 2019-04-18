@@ -10,45 +10,41 @@
 """
 Pauli Y (bit-phase-flip) gate.
 """
-from qiskit import CompositeGate
-from qiskit import Gate
-from qiskit import InstructionSet
-from qiskit import QuantumCircuit
-from qiskit import QuantumRegister
-from qiskit.extensions.standard import header  # pylint: disable=unused-import
+from qiskit.circuit import CompositeGate
+from qiskit.circuit import Gate
+from qiskit.circuit import QuantumCircuit
+from qiskit.circuit import QuantumRegister
+from qiskit.circuit.decorators import _op_expand
+from qiskit.qasm import pi
+from qiskit.extensions.standard.u3 import U3Gate
 
 
 class YGate(Gate):
     """Pauli Y (bit-phase-flip) gate."""
 
-    def __init__(self, qubit, circ=None):
+    def __init__(self):
         """Create new Y gate."""
-        super().__init__("y", [], [qubit], circ)
+        super().__init__("y", 1, [])
 
-    def qasm(self):
-        """Return OPENQASM string."""
-        qubit = self.arg[0]
-        return self._qasmif("y %s[%d];" % (qubit[0].name, qubit[1]))
+    def _define(self):
+        definition = []
+        q = QuantumRegister(1, "q")
+        rule = [
+            (U3Gate(pi, pi/2, pi/2), [q[0]], [])
+        ]
+        for inst in rule:
+            definition.append(inst)
+        self.definition = definition
 
     def inverse(self):
         """Invert this gate."""
-        return self  # self-inverse
-
-    def reapply(self, circuit):
-        """Reapply this gate to corresponding qubits in circ."""
-        self._modifiers(circuit.y(self.arg[0]))
+        return YGate()  # self-inverse
 
 
+@_op_expand(1)
 def y(self, q):
     """Apply Y to q."""
-    if isinstance(q, QuantumRegister):
-        instructions = InstructionSet()
-        for j in range(q.size):
-            instructions.add(self.y((q, j)))
-        return instructions
-
-    self._check_qubit(q)
-    return self._attach(YGate(q, self))
+    return self.append(YGate(), [q], [])
 
 
 QuantumCircuit.y = y
